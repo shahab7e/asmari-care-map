@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0e7c66">
 <title>مراکز طرف قرارداد با آسماری</title>
 <meta name="description" content="نقشه و فهرست مراکز درمانی طرف قرارداد با آسماری در تهران، با جستجو، فیلتر خدمت و مسیریابی">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
+<link rel="preload" href="fonts/Vazirmatn.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script>
 // App name, and the list date shown under it (leave UPDATED empty to hide).
@@ -22,6 +22,8 @@ if (NESHAN_KEY) document.write(`<link rel="stylesheet" href="${NESHAN_SDK}.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css">
 <style>
+  /* Self-hosted: jsDelivr is unreliable on Iranian mobile networks */
+  @font-face { font-family: Vazirmatn; src: url(fonts/Vazirmatn.woff2) format("woff2"); font-weight: 100 900; font-display: swap; }
   :root {
     --primary: #0e7c66; --primary-dark: #0a5e4d; --primary-soft: #e6f4f0;
     --bg: #f5f8f7; --card: #fff; --text: #14302a; --muted: #5b6b67; --border: #e1e8e6;
