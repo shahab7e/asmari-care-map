@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0e7c66">
+<title>مراکز طرف قرارداد با آسماری</title>
+<meta name="description" content="نقشه و فهرست مراکز درمانی طرف قرارداد با آسماری در تهران، با جستجو، فیلتر خدمت و مسیریابی">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script>
+// App name, and the list date shown under it (leave UPDATED empty to hide).
+const APP_NAME = 'مراکز طرف قرارداد با آسماری';
+const UPDATED = '';
+// Neshan web key (platform.neshan.org → panel → new "web" key). Empty = OpenStreetMap, and the Neshan SDK isn't loaded.
+const NESHAN_KEY = '';
+const NESHAN_SDK = 'https://static.neshan.org/sdk/leaflet/v1.9.4/neshan-sdk/v1.0.8/index';
+if (NESHAN_KEY) document.write(`<link rel="stylesheet" href="${NESHAN_SDK}.css"><script src="${NESHAN_SDK}.js"><\/script>`);
+</script>
+<!-- Neshan SDK bundles Leaflet; otherwise (or if it fails) load plain Leaflet -->
+<script>window.L || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"><\/script>')</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css">
+<style>
+  :root {
+    --primary: #0e7c66; --primary-dark: #0a5e4d; --primary-soft: #e6f4f0;
+    --bg: #f5f8f7; --card: #fff; --text: #14302a; --muted: #5b6b67; --border: #e1e8e6;
+    --radius: 14px; --shadow: 0 2px 10px rgba(16, 48, 42, .08);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font-family: Vazirmatn, Tahoma, sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.6;
+         display: grid; grid-template-rows: auto 1fr; grid-template-columns: minmax(0, 1fr); overflow: hidden; }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; border: 0; background: none; }
+  :focus-visible { outline: 3px solid #f5b400; outline-offset: 2px; }
+  svg { flex: none; }
+
+  .top { position: relative; z-index: 2; background: var(--primary); color: #fff; padding: 12px 16px 14px; padding-top: max(12px, env(safe-area-inset-top)); }
+  .bar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .bar > div { flex: 1; min-width: 0; }
+  .bar h1 { margin: 0; font-size: 18px; font-weight: 800; }
+  .sub { margin: 0; font-size: 13px; opacity: .9; }
+  .near { display: flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 999px; background: var(--primary-dark); border: 1px solid rgba(255,255,255,.4); color: #fff; font-weight: 600; white-space: nowrap; transition: background .2s; }
+  .near:hover, .near[aria-pressed="true"] { background: #fff; color: var(--primary); }
+  .near[aria-busy="true"] { cursor: progress; opacity: .85; }
+  .near[aria-busy="true"] svg { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .row { display: flex; gap: 8px; }
+  .search { position: relative; flex: 1; min-width: 0; }
+  .search svg { position: absolute; top: 50%; right: 14px; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+  .search input { width: 100%; height: 46px; padding: 0 44px 0 40px; border: 0; border-radius: 12px; background: #fff; color: var(--text); font-size: 16px; box-shadow: var(--shadow); }
+  .search input::placeholder { color: #8a9894; }
+  .search .clear { position: absolute; top: 50%; left: 6px; transform: translateY(-50%); width: 34px; height: 34px; border-radius: 50%; color: var(--muted); display: none; place-items: center; }
+  .search input:not(:placeholder-shown) ~ .clear { display: grid; }
+
+  .filter { position: relative; flex: none; max-width: 48%; }
+  #ftrig { display: flex; align-items: center; gap: 6px; height: 46px; max-width: 100%; padding: 0 12px; border-radius: 12px; background: #fff; color: var(--text); box-shadow: var(--shadow); font-weight: 600; }
+  #ftrig > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #ftrig svg { width: 20px; height: 20px; color: var(--c); }
+  #ftrig .chev { width: 16px; height: 16px; color: var(--muted); transition: transform .2s; }
+  #ftrig[aria-expanded="true"] .chev { transform: rotate(180deg); }
+  #fmenu { position: absolute; top: calc(100% + 6px); left: 0; width: max(100%, 260px); max-height: min(60vh, 460px); overflow-y: auto; margin: 0; padding: 6px; list-style: none;
+           background: var(--card); color: var(--text); border-radius: var(--radius); box-shadow: 0 8px 28px rgba(16,48,42,.22); }
+  #fmenu[hidden] { display: none; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 10px; border-radius: 10px; text-align: right; }
+  .opt:hover { background: var(--bg); }
+  .opt[aria-checked="true"] { background: var(--primary-soft); font-weight: 600; }
+  .opt .badge { width: 32px; height: 32px; border-radius: 10px; }
+  .opt .badge svg { width: 18px; height: 18px; }
+  .opt > span:nth-child(2) { flex: 1; }
+  .opt small { color: var(--muted); }
+
+  main { display: grid; grid-template-rows: 1fr var(--sheet, 36%); grid-template-columns: minmax(0, 1fr); min-height: 0; }
+  #map { min-height: 0; z-index: 0; }
+  .panel { position: relative; display: flex; flex-direction: column; min-height: 0; background: var(--card); border-radius: 18px 18px 0 0; box-shadow: 0 -4px 16px rgba(16,48,42,.1); margin-top: -14px; z-index: 1; }
+  .grip { display: grid; place-items: center; height: 24px; touch-action: none; cursor: ns-resize; }
+  .grip::before { content: ""; width: 44px; height: 5px; border-radius: 3px; background: #c9d4d1; }
+  .count { padding: 0 16px 6px; color: var(--muted); font-size: 13px; }
+  #list { flex: 1; overflow-y: auto; margin: 0; padding: 0 8px max(8px, env(safe-area-inset-bottom)); list-style: none; }
+  #list li > button { display: flex; width: 100%; gap: 12px; align-items: center; padding: 10px 8px; border-radius: 12px; text-align: right; transition: background .15s; }
+  #list li > button:hover, #list li.on > button { background: var(--primary-soft); }
+  #list li.on > button { box-shadow: inset -3px 0 0 var(--primary); }
+  #list .t { display: block; font-weight: 600; }
+  #list .s { display: block; color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #list li > button > span:last-child { min-width: 0; flex: 1; }
+  .dist { flex: none; color: var(--primary); font-size: 13px; font-weight: 600; }
+  .empty { padding: 32px 16px; text-align: center; color: var(--muted); }
+  .empty b { display: block; color: var(--text); margin-bottom: 4px; }
+  .more { display: block; width: calc(100% - 16px); margin: 8px; min-height: 44px; border-radius: 12px; background: var(--primary-soft); color: var(--primary-dark); font-weight: 600; }
+
+  .badge { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: color-mix(in srgb, var(--c) 14%, #fff); color: var(--c); }
+  .badge svg { width: 22px; height: 22px; }
+  .pin { display: grid; place-items: center; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--c); color: #fff; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+  .pin svg { width: 16px; height: 16px; transform: rotate(45deg); }
+  .cluster { display: grid; place-items: center; border-radius: 50%; background: var(--primary); color: #fff; font-weight: 700; font-size: 14px;
+             border: 3px solid #fff; box-shadow: 0 0 0 4px rgba(14,124,102,.25), 0 2px 6px rgba(0,0,0,.3); }
+
+  .leaflet-container { font-family: inherit; direction: ltr; }
+  .leaflet-control-attribution { direction: ltr; }
+  /* RTL: Leaflet assumes LTR, so popup content is RTL and the close button moves left */
+  .leaflet-popup-content { direction: rtl; margin: 14px 16px; font-size: 14px; line-height: 1.7; min-width: 230px; }
+  .leaflet-popup-content-wrapper { border-radius: var(--radius); box-shadow: var(--shadow); text-align: right; }
+  .leaflet-container a.leaflet-popup-close-button { right: auto; left: 4px; top: 4px; width: 32px; height: 32px; font-size: 22px; line-height: 32px; }
+  .pop h3 { margin: 0; padding-left: 28px; font-size: 15px; }
+  .pop .type { color: var(--c); font-weight: 600; font-size: 13px; }
+  .pop p { margin: 6px 0 8px; color: var(--muted); max-height: 5.1em; overflow-y: auto; }
+  .phones { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; margin-bottom: 8px; font-size: 13px; color: var(--muted); }
+  .phones a { padding: 2px 8px; border-radius: 8px; background: var(--bg); color: var(--text) !important; text-decoration: none; direction: ltr; unicode-bidi: isolate; }
+  .note { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
+  .acts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .acts a, .acts button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; border-radius: 10px; background: var(--primary-soft); color: var(--primary-dark) !important; text-decoration: none; font-weight: 600; }
+  .acts a.main { grid-column: 1 / -1; background: var(--primary); color: #fff !important; }
+  .acts svg { width: 18px; height: 18px; }
+
+  .skip { position: fixed; top: 8px; right: 8px; z-index: 1000; padding: 10px 14px; border-radius: 10px; background: var(--text); color: #fff; transform: translateY(-150%); }
+  .skip:focus { transform: none; }
+  #toast { position: fixed; bottom: max(20px, env(safe-area-inset-bottom)); left: 50%; z-index: 1000; max-width: calc(100% - 32px); padding: 10px 16px; border-radius: 12px;
+           background: var(--text); color: #fff; box-shadow: var(--shadow); transform: translate(-50%, 150%); opacity: 0; transition: transform .25s, opacity .25s; }
+  #toast.show { transform: translate(-50%, 0); opacity: 1; }
+
+  /* side-by-side: desktop, and phones in landscape where stacking leaves no room for the map */
+  @media (min-width: 900px), (orientation: landscape) and (max-height: 520px) {
+    body { grid-template-columns: min(400px, 48vw) minmax(0, 1fr); grid-template-rows: auto 1fr; }
+    .top { grid-column: 1; }
+    main { display: contents; }
+    #map { grid-column: 2; grid-row: 1 / 3; }
+    .panel { grid-column: 1; grid-row: 2; margin: 0; border-radius: 0; box-shadow: none; }
+    .grip { display: none; }
+    .count { padding-top: 12px; }
+  }
+  @media (orientation: landscape) and (max-height: 520px) {
+    .top { padding: 8px 12px; }
+    .bar { margin-bottom: 6px; }
+    .bar h1 { font-size: 16px; }
+    .search input, #ftrig { height: 40px; }
+    #fmenu { max-height: 70vh; }
+    .count { padding-top: 8px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<a class="skip" href="#list">پرش به لیست مراکز</a>
+<div id="toast" role="status" aria-live="polite"></div>
+<header class="top">
+  <div class="bar">
+    <div>
+      <h1 id="title">مراکز طرف قرارداد با آسماری</h1>
+      <p class="sub" id="sub" hidden></p>
+    </div>
+    <button class="near" id="near" type="button" aria-pressed="false"></button>
+  </div>
+  <div class="row">
+    <label class="search">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="نام، خیابان یا محله…" aria-label="جستجو" autocomplete="off" enterkeyhint="search">
+      <button class="clear" id="clear" type="button" aria-label="پاک کردن جستجو">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </label>
+    <div class="filter">
+      <button id="ftrig" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="fmenu" aria-label="نوع خدمت"></button>
+      <ul id="fmenu" role="menu" aria-label="نوع خدمت" hidden></ul>
+    </div>
+  </div>
+</header>
+<main id="main">
+  <div id="map"></div>
+  <section class="panel">
+    <button class="grip" id="grip" type="button" aria-label="بزرگ و کوچک کردن لیست"></button>
+    <div class="count" id="count" aria-live="polite"></div>
+    <ul id="list" tabindex="-1" aria-label="لیست مراکز"></ul>
+  </section>
+</main>
+<script>
+const DATA = /*DATA*/, ICONS = /*ICONS*/;
+const COLORS = ['#0e7c66', '#2563eb', '#c2410c', '#7c3aed', '#be123c', '#0e7490', '#a16207', '#4d7c0f', '#db2777', '#475569', '#9333ea', '#15803d', '#b45309', '#1d4ed8'];
+const types = [...new Set(DATA.map(d => d.type))].sort();
+const color = t => COLORS[types.indexOf(t) % COLORS.length];
+const icon = t => ICONS[t] || ICONS['کلینیک'];
+const fa = n => n.toLocaleString('fa-IR');
+const faDigits = s => s.replace(/[0-9]/g, c => '۰۱۲۳۴۵۶۷۸۹'[c]);
+// unify letters, digits, diacritics and separators so «ي»=«ی», «290»=«۲۹۰», «وَنک»=«ونک»
+const norm = s => faDigits(s.replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/[٠-٩]/g, c => '۰۱۲۳۴۵۶۷۸۹'[c.charCodeAt(0) - 0x660]))
+  .replace(/[ً-ْ]/g, '').replace(/[‌\-–_]/g, ' ').replace(/\s+/g, ' ').trim();
+// spaces are dropped when matching, so «ولیعصر» finds «ولی عصر» and the other way round
+DATA.forEach(d => d.flat = norm(`${d.title} ${d.address} ${d.type}`).replace(/ /g, ''));
+const phonesOf = d => [...new Set(d.phone.split(/\s+/).filter(Boolean))];
+
+const $ = id => document.getElementById(id);
+const list = $('list'), q = $('q'), near = $('near');
+$('title').textContent = document.title = APP_NAME;
+if (UPDATED) { $('sub').textContent = `به‌روزرسانی فهرست: ${UPDATED}`; $('sub').hidden = false; }
+
+const center = [35.715, 51.39];
+const map = NESHAN_KEY
+  ? new L.Map('map', { key: NESHAN_KEY, maptype: 'neshan', poi: false, traffic: false, center, zoom: 12, zoomControl: false })
+  : L.map('map', { zoomControl: false }).setView(center, 12);
+if (!NESHAN_KEY) L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
+L.control.zoom({ zoomInTitle: 'بزرگ‌نمایی', zoomOutTitle: 'کوچک‌نمایی' }).addTo(map);
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// nearby pins merge into a numbered circle until zoomed in, so each pin is tappable
+const layer = L.markerClusterGroup({
+  maxClusterRadius: 45, disableClusteringAtZoom: 16, showCoverageOnHover: false, spiderfyOnMaxZoom: false, animate: !reduceMotion,
+  iconCreateFunction: c => { const n = c.getChildCount(), s = n < 10 ? 36 : n < 100 ? 42 : 50;
+    return L.divIcon({ className: '', html: `<div class="cluster" style="width:${s}px;height:${s}px">${fa(n)}</div>`, iconSize: [s, s] }); },
+}).addTo(map);
+
+let selected = '', me = null, meMarker = null, matches = [], shown = [], limit = 0, popupOpen = false;
+const PAGE = 60; // list rows rendered at a time; the rest load with «نمایش بیشتر»
+const UA = navigator.userAgent, ANDROID = /Android/.test(UA),
+  IOS = /iPhone|iPad|iPod/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+let toastTimer;
+const toast = msg => {
+  const el = $('toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 4000);
+};
+
+const km = (a, b) => { // haversine
+  const r = Math.PI / 180, dLat = (b[0] - a[0]) * r, dLng = (b[1] - a[1]) * r;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLng / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(h));
+};
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const pinIcons = Object.fromEntries(types.map(t => [t, L.divIcon({
+  className: '', html: `<div class="pin" style="--c:${color(t)};width:30px;height:30px">${icon(t)}</div>`, iconSize: [30, 30], iconAnchor: [15, 36], popupAnchor: [0, -34] })]));
+
+// service-type dropdown (custom, since a native <select> can't show the icons)
+const ftrig = $('ftrig'), fmenu = $('fmenu');
+const ALL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>';
+const CHEV = '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+const setTrigger = () => {
+  ftrig.style.setProperty('--c', selected ? color(selected) : 'var(--primary)');
+  ftrig.innerHTML = (selected ? icon(selected) : ALL_ICON) + `<span>${selected || 'همه خدمات'}</span>` + CHEV;
+};
+['', ...types].forEach(t => {
+  const li = document.createElement('li'); li.setAttribute('role', 'none');
+  li.innerHTML = `<button class="opt" type="button" role="menuitemradio" aria-checked="${!t}" data-t="${t}">
+    <span class="badge" style="--c:${t ? color(t) : 'var(--primary)'}">${t ? icon(t) : ALL_ICON}</span>
+    <span>${t || 'همه خدمات'}</span><small>${fa(t ? DATA.filter(d => d.type === t).length : DATA.length)}</small></button>`;
+  li.firstChild.onclick = () => {
+    selected = t;
+    fmenu.querySelectorAll('.opt').forEach(o => o.setAttribute('aria-checked', o.dataset.t === t));
+    setTrigger(); toggleMenu(false); ftrig.focus(); render(true);
+  };
+  fmenu.append(li);
+});
+function toggleMenu(open) {
+  fmenu.hidden = !open; ftrig.setAttribute('aria-expanded', open);
+  if (open) fmenu.querySelector('[aria-checked="true"]').focus();
+}
+ftrig.onclick = () => toggleMenu(fmenu.hidden);
+document.addEventListener('click', e => { if (!fmenu.hidden && !e.target.closest('.filter')) toggleMenu(false); });
+fmenu.onkeydown = e => {
+  const opts = [...fmenu.querySelectorAll('.opt')], i = opts.indexOf(document.activeElement);
+  if (e.key === 'Escape') { toggleMenu(false); ftrig.focus(); }
+  else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); opts[(i + (e.key === 'ArrowDown' ? 1 : -1) + opts.length) % opts.length].focus(); }
+  else if (e.key === 'Tab') toggleMenu(false);
+};
+setTrigger();
+
+const I = {
+  route: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg>',
+  map: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+  call: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>',
+  share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>',
+  locate: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="7"/></svg>',
+  close: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+};
+
+const gmapsDir = d => `https://www.google.com/maps/dir/?api=1&destination=${d.lat},${d.lng}`;
+const tel = p => p.split('-')[0].replace(/\D/g, ''); // «02188803876-9» is a range; dial the first
+
+function popup(d) {
+  const ll = `${d.lat},${d.lng}`, phones = phonesOf(d), name = encodeURIComponent(d.title);
+  // geo: opens the Android app picker; iOS and desktop don't understand it
+  const route = ANDROID ? `geo:${ll}?q=${ll}(${name})` : IOS ? `https://maps.apple.com/?daddr=${ll}&q=${name}` : gmapsDir(d);
+  return `<div class="pop" style="--c:${color(d.type)}"><h3>${esc(d.title)}</h3><span class="type">${esc(d.type)}</span>
+    <p>${esc(d.address)}</p>
+    ${phones.length ? `<div class="phones">تلفن: ${phones.map(p => `<a href="tel:${tel(p)}">${faDigits(esc(p))}</a>`).join('')}</div>` : ''}
+    <div class="acts">
+      <a class="main" href="${route}"${ANDROID ? '' : ' target="_blank" rel="noopener"'}>${I.route}مسیریابی</a>
+      ${ANDROID || IOS ? `<a href="${gmapsDir(d)}" target="_blank" rel="noopener">${I.map}گوگل‌مپ</a>` : ''}
+      ${phones.length ? `<a href="tel:${tel(phones[0])}">${I.call}تماس</a>` : ''}
+      <button type="button" onclick="share(${d.id})">${I.share}اشتراک</button>
+    </div>
+    <p class="note">پیش از مراجعه، قرارداد و ساعت کاری را تلفنی بپرسید.</p></div>`;
+}
+
+// a shared link opens this app on the same center (#c=id); outside http(s) fall back to Google Maps
+const appLink = id => location.protocol.startsWith('http') ? `${location.href.split('#')[0]}#c=${id}` : '';
+window.share = async id => {
+  const d = DATA.find(x => x.id === id), link = appLink(id);
+  const text = [d.title, d.address, phonesOf(d).join(' - '), link && `مسیر در گوگل‌مپ: ${gmapsDir(d)}`].filter(Boolean).join('\n');
+  const url = link || gmapsDir(d);
+  if (navigator.share) return navigator.share({ title: d.title, text, url }).catch(() => {});
+  try { await navigator.clipboard.writeText(`${text}\n${url}`); toast('مشخصات و لینک مرکز کپی شد'); }
+  catch { toast('کپی انجام نشد؛ آدرس را از پنجره‌ی مرکز بردارید.'); }
+};
+
+function highlight(id, scroll) {
+  list.querySelectorAll('li.on').forEach(li => li.classList.remove('on'));
+  const idx = shown.findIndex(d => d.id === id);
+  while (idx >= limit) showMore(); // a tapped pin may sit beyond the rows rendered so far
+  const li = list.querySelector(`li[data-id="${id}"]`);
+  li?.classList.add('on');
+  if (scroll) li?.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+}
+
+// markers are built once; render() only adds/removes them
+const markers = Object.fromEntries(DATA.map(d => [d.id,
+  L.marker([d.lat, d.lng], { icon: pinIcons[d.type], title: d.title, keyboard: false }) // list is the keyboard path
+    .bindPopup(() => popup(d), { autoPanPadding: [16, 16] })
+    .on('click', () => highlight(d.id, true))]));
+for (const id in markers) markers[id].cid = +id;
+let onMap = new Set();
+const setHash = h => { try { history.replaceState(null, '', h); } catch {} }; // throws on some sandboxed origins
+
+map.on('popupopen', e => {
+  popupOpen = true;
+  const x = e.popup.getElement()?.querySelector('.leaflet-popup-close-button');
+  x?.setAttribute('aria-label', 'بستن'); x?.setAttribute('title', 'بستن');
+  const id = e.popup._source?.cid; // keep the address bar on the open center, so copying it shares that center
+  if (id) setHash(`#c=${id}`);
+});
+map.on('popupclose', e => {
+  popupOpen = false;
+  if (location.hash === `#c=${e.popup._source?.cid}`) setHash(location.pathname + location.search);
+});
+
+function focus(d) {
+  const m = markers[d.id];
+  // put the marker near the bottom of the map so the popup above it is fully visible
+  const h = map.getSize().y, pt = map.project([d.lat, d.lng], 16).subtract([0, h / 2 - 60]);
+  map.setView(map.unproject(pt, 16), 16, { animate: false });
+  layer.zoomToShowLayer(m, () => {
+    m.openPopup();
+    m.getPopup().getElement()?.querySelector('a, button')?.focus({ preventScroll: true });
+  });
+  highlight(d.id);
+}
+
+function row(d) {
+  const li = document.createElement('li');
+  li.dataset.id = d.id;
+  li.innerHTML = `<button><span class="badge" style="--c:${color(d.type)}">${icon(d.type)}</span>
+    <span><span class="t">${esc(d.title)}</span><span class="s">${esc(d.type)} · ${esc(d.address)}</span></span>
+    ${me ? `<span class="dist">${fa(+d.dist.toFixed(1))} کیلومتر</span>` : ''}</button>`;
+  li.firstChild.onclick = () => focus(d);
+  return li;
+}
+
+function showMore() {
+  list.querySelector('.more-li')?.remove();
+  const frag = document.createDocumentFragment();
+  shown.slice(limit, limit + PAGE).forEach(d => frag.append(row(d)));
+  limit += PAGE;
+  if (limit < shown.length) {
+    const li = document.createElement('li'); li.className = 'more-li';
+    li.innerHTML = `<button class="more">نمایش بیشتر (${fa(shown.length - limit)} مرکز دیگر)</button>`;
+    li.firstChild.onclick = () => { const next = limit; showMore(); list.children[next]?.firstChild.focus(); };
+    frag.append(li);
+  }
+  list.append(frag);
+}
+
+// list order follows the user: distance from them if located, otherwise from the middle of the map
+function renderList() {
+  const ref = me || [map.getCenter().lat, map.getCenter().lng];
+  matches.forEach(d => d.dist = km(ref, [d.lat, d.lng]));
+  shown = [...matches].sort((a, b) => a.dist - b.dist);
+  $('count').textContent = shown.length ? `${fa(shown.length)} مرکز · ${me ? 'نزدیک‌ترین به شما' : 'نزدیک‌ترین به وسط نقشه'} در بالا` : '';
+  list.innerHTML = ''; list.scrollTop = 0; limit = 0;
+  if (!shown.length) list.innerHTML = `<li class="empty"><b>مرکزی پیدا نشد</b>بخشی از نام یا خیابان را بنویسید${selected ? ' یا «همه خدمات» را انتخاب کنید' : ''}.</li>`;
+  else showMore();
+}
+
+function render(fit) {
+  const words = norm(q.value).split(' ').filter(Boolean);
+  matches = DATA.filter(d => (!selected || d.type === selected) && words.every(w => d.flat.includes(w)));
+  const keep = new Set(matches.map(d => d.id));
+  layer.removeLayers([...onMap].filter(id => !keep.has(id)).map(id => markers[id]));
+  layer.addLayers(matches.filter(d => !onMap.has(d.id)).map(d => markers[d.id]));
+  onMap = keep;
+  if (fit && matches.length && !me) map.fitBounds(matches.map(d => [d.lat, d.lng]), { padding: [30, 30], maxZoom: 16, animate: false });
+  renderList();
+}
+
+let moveTimer;
+map.on('moveend', () => { // re-sort for the area the user is looking at (not while reading a popup)
+  clearTimeout(moveTimer);
+  moveTimer = setTimeout(() => { if (!me && !popupOpen) renderList(); }, 250); // checked late: a list tap moves the map, then opens its popup
+});
+
+let t;
+q.oninput = () => { clearTimeout(t); t = setTimeout(() => render(true), 200); };
+$('clear').onclick = () => { q.value = ''; q.focus(); render(true); };
+
+// «near me»: idle → locating (spinner) → on (tap again to turn off)
+function setNear(state) {
+  near.setAttribute('aria-busy', state === 'busy');
+  near.setAttribute('aria-pressed', state === 'on');
+  near.disabled = state === 'busy';
+  near.innerHTML = state === 'busy' ? `${I.locate}در حال یافتن…` : state === 'on' ? `${I.close}نزدیک من` : `${I.locate}نزدیک من`;
+  near.setAttribute('aria-label', state === 'on' ? 'خاموش کردن مرتب‌سازی بر اساس فاصله از من' : 'مرتب‌سازی مراکز بر اساس فاصله از من');
+}
+near.onclick = () => {
+  if (me) { me = null; meMarker?.remove(); setNear('off'); renderList(); return; }
+  if (!navigator.geolocation) return toast('این مرورگر موقعیت مکانی را پشتیبانی نمی‌کند. نقشه را روی محله‌ی خود ببرید.');
+  setNear('busy');
+  navigator.geolocation.getCurrentPosition(p => {
+    me = [p.coords.latitude, p.coords.longitude];
+    setNear('on');
+    meMarker?.remove();
+    meMarker = L.circleMarker(me, { radius: 9, color: '#fff', weight: 3, fillColor: '#2563eb', fillOpacity: 1 }).addTo(map).bindPopup('موقعیت شما');
+    map.setView(me, 15); renderList();
+  }, err => {
+    setNear('off');
+    toast(err.code === 1
+      ? 'اجازه‌ی موقعیت مکانی داده نشده. از تنظیمات مرورگر برای این سایت فعالش کنید.'
+      : 'موقعیت شما پیدا نشد. دوباره امتحان کنید یا نقشه را روی محله‌ی خود ببرید.');
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+};
+setNear('off');
+
+// mobile list sheet: tap the grip to cycle sizes, or drag it
+const main = $('main'), grip = $('grip'), SIZES = [.18, .36, .75];
+let sheet = 1, dragY = null;
+const setSheet = px => { main.style.setProperty('--sheet', px + 'px'); map.invalidateSize(); };
+const snap = i => { sheet = i; setSheet(main.clientHeight * SIZES[i]); grip.setAttribute('aria-expanded', i === 2); };
+grip.onpointerdown = e => { dragY = { y: e.clientY, h: $('list').parentElement.offsetHeight, moved: false }; grip.setPointerCapture(e.pointerId); };
+grip.onpointermove = e => {
+  if (!dragY) return;
+  const dy = dragY.y - e.clientY;
+  if (Math.abs(dy) > 6) dragY.moved = true;
+  if (dragY.moved) setSheet(Math.min(main.clientHeight - 60, Math.max(60, dragY.h + dy)));
+};
+grip.onpointerup = () => {
+  if (!dragY) return;
+  if (dragY.moved) { // snap to the nearest size
+    const f = $('list').parentElement.offsetHeight / main.clientHeight;
+    snap(SIZES.reduce((b, s, i) => Math.abs(s - f) < Math.abs(SIZES[b] - f) ? i : b, 0));
+  } else snap((sheet + 1) % SIZES.length);
+  dragY = null;
+};
+grip.onkeydown = e => { if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); snap(Math.max(0, Math.min(2, sheet + (e.key === 'ArrowUp' ? 1 : -1)))); } };
+grip.onclick = e => { if (e.detail === 0) snap((sheet + 1) % SIZES.length); }; // keyboard Enter/Space
+
+render();
+// open a shared center: …#c=123
+const openHash = () => { const d = DATA.find(x => `#c=${x.id}` === location.hash); if (d) focus(d); };
+addEventListener('hashchange', openHash);
+openHash();
+</script>
+</body>
+</html>
